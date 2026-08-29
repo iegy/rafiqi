@@ -1,0 +1,34 @@
+name: Polish Quran player
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-quran-player.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prevent playback restart when changing speed or volume
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('components/quran-player.tsx')
+          text = path.read_text()
+          old = '  }, [audioSource, speed, volume]);'
+          new = '  }, [audioSource]);'
+          if old not in text:
+              raise SystemExit('Expected player effect dependency was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit polish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/quran-player.tsx
+          git commit -m "Keep Quran playback position when adjusting controls"
+          git push
