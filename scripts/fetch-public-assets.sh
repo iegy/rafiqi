@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-asset_origin="${RAFIQI_ASSET_ORIGIN:-https://rafiqi-web.balmy-tapir-0567.chatgpt.site}"
+asset_origin="${RAFIQI_ASSET_ORIGIN:-https://rafiqi.iegy.net}"
 
 mkdir -p public/data public/download public/fonts public/icons
 
