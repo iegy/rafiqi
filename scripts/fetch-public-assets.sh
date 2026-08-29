@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-asset_origin="${RAFIQI_ASSET_ORIGIN:-https://rafiqi.iegy.net}"
+required_assets=(
+  "public/data/quran.json"
+  "public/download/Rafiqi.apk"
+  "public/audio-adhan.mp3"
+  "public/fonts/noto-sans-arabic.ttf"
+  "public/fonts/noto-naskh-arabic.ttf"
+  "public/icons/icon-192.png"
+  "public/icons/icon-512.png"
+)
 
-mkdir -p public/data public/download public/fonts public/icons
+missing=0
+for asset in "${required_assets[@]}"; do
+  if [[ ! -s "$asset" ]]; then
+    echo "Missing required local asset: $asset" >&2
+    missing=1
+  fi
+done
 
-fetch_asset() {
-  local relative_path="$1"
-  curl --fail --location --retry 3 --silent --show-error \
-    "$asset_origin/$relative_path" \
-    --output "public/$relative_path"
-}
+if [[ "$missing" -ne 0 ]]; then
+  exit 1
+fi
 
-fetch_asset "data/quran.json"
-fetch_asset "download/Rafiqi.apk"
-fetch_asset "audio-adhan.mp3"
-fetch_asset "fonts/noto-sans-arabic.ttf"
-fetch_asset "fonts/noto-naskh-arabic.ttf"
-fetch_asset "icons/icon-192.png"
-fetch_asset "icons/icon-512.png"
+echo "All Rafiqi runtime assets are stored locally in this GitHub repository."
