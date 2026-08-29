@@ -158,6 +158,7 @@ export function QuranPlayer() {
   const [playerWidth, setPlayerWidth] = useState(500);
   const [playerOffset, setPlayerOffset] = useState({ x: 0, y: 0 });
   const [draggingPlayer, setDraggingPlayer] = useState(false);
+  const [playerHidden, setPlayerHidden] = useState(false);
 
   const currentSurah = useMemo(
     () => quran.find((surah) => surah.number === selectedSurah) ?? null,
@@ -234,6 +235,7 @@ export function QuranPlayer() {
         continuous?: boolean;
         playerWidth?: number;
         playerOffset?: { x: number; y: number };
+        playerHidden?: boolean;
       };
       if (saved.surah && saved.surah >= 1 && saved.surah <= 114) setSelectedSurah(saved.surah);
       if (saved.voice) setSelectedVoiceKey(saved.voice);
@@ -245,6 +247,7 @@ export function QuranPlayer() {
       if (saved.playerOffset && Number.isFinite(saved.playerOffset.x) && Number.isFinite(saved.playerOffset.y)) {
         setPlayerOffset({ x: saved.playerOffset.x, y: saved.playerOffset.y });
       }
+      if (typeof saved.playerHidden === "boolean") setPlayerHidden(saved.playerHidden);
     } catch {
       // Keep defaults if old browser state is malformed.
     }
@@ -262,9 +265,10 @@ export function QuranPlayer() {
         continuous: continueSurahs,
         playerWidth,
         playerOffset,
+        playerHidden,
       }),
     );
-  }, [continueSurahs, playerOffset, playerWidth, repeatMode, selectedSurah, selectedVoiceKey, speed, volume]);
+  }, [continueSurahs, playerHidden, playerOffset, playerWidth, repeatMode, selectedSurah, selectedVoiceKey, speed, volume]);
 
   useEffect(() => {
     let active = true;
@@ -653,7 +657,7 @@ export function QuranPlayer() {
 
       <div
         ref={playerRef}
-        className={`rafiqi-quran-floating fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-3 right-3 z-[80] md:bottom-5 md:left-auto md:right-6 ${draggingPlayer ? "is-dragging" : ""}`}
+        className={`rafiqi-quran-floating fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-3 right-3 z-[80] md:bottom-5 md:left-auto md:right-6 ${draggingPlayer ? "is-dragging" : ""} ${playerHidden ? "hidden" : ""}`}
         style={{
           "--rafiqi-player-width": `${playerWidth}px`,
           "--rafiqi-player-x": `${playerOffset.x}px`,
@@ -689,7 +693,7 @@ export function QuranPlayer() {
                 <button className="hidden h-9 w-9 place-items-center rounded-xl border border-border md:grid" onClick={() => resizePlayer(80)} aria-label="تكبير عرض المشغل" title="تكبير المشغل">
                   <Plus className="h-4 w-4" />
                 </button>
-                <button className="grid h-9 w-9 place-items-center rounded-xl border border-border" onClick={() => setExpanded(false)} aria-label="تصغير المشغل">
+                <button className="grid h-9 w-9 place-items-center rounded-xl border border-border" onClick={() => { setExpanded(false); setPlayerHidden(true); }} aria-label="إخفاء المشغل" title="إخفاء المشغل">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -882,6 +886,9 @@ export function QuranPlayer() {
             <button className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border" onClick={() => goToSurah(Math.min(114, selectedSurah + 1), desiredPlaying.current)} disabled={selectedSurah >= 114} aria-label="السورة التالية">
               <ChevronLeft className="h-4 w-4" />
             </button>
+            <button className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border" onClick={() => setPlayerHidden(true)} aria-label="إخفاء مشغل القرآن" title="إخفاء المشغل">
+              <X className="h-4 w-4" />
+            </button>
             <button className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? "تصغير" : "توسيع"}>
               {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
             </button>
@@ -893,6 +900,19 @@ export function QuranPlayer() {
           )}
         </div>
       </div>
+
+      {playerHidden && (
+        <button
+          className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] right-3 z-[81] flex h-12 items-center gap-2 rounded-full border border-border bg-card/95 px-4 text-sm font-bold text-foreground shadow-2xl backdrop-blur-xl md:bottom-5 md:right-6"
+          onClick={() => setPlayerHidden(false)}
+          aria-label="إظهار مشغل القرآن"
+          title="إظهار مشغل القرآن"
+        >
+          <BookOpen className="h-5 w-5 text-primary" />
+          <span>مشغل القرآن</span>
+          {isPlaying && <span className="h-2 w-2 rounded-full bg-primary" aria-label="التلاوة تعمل" />}
+        </button>
+      )}
     </>
   );
 }
