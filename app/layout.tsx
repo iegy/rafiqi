@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { QuranPlayer } from "@/components/quran-player";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <QuranPlayer />
+      </body>
     </html>
   );
 }
