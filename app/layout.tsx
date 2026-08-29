@@ -10,9 +10,6 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "رفيقي", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
   alternates: { canonical: "/" },
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/icons/icon-192.png",
     shortcut: "/icons/icon-192.png",
