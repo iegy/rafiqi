@@ -1,0 +1,47 @@
+name: Vendor Rafiqi runtime assets
+
+on:
+  push:
+    paths:
+      - '.github/workflows/vendor-runtime-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore runtime assets from last successful GitHub Pages artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rafiqi-artifact
+          gh api /repos/${GITHUB_REPOSITORY}/actions/artifacts/9718568314/zip > /tmp/rafiqi-pages.zip
+          unzip -q /tmp/rafiqi-pages.zip -d /tmp/rafiqi-artifact
+          mkdir -p /tmp/rafiqi-site
+          tar -xf /tmp/rafiqi-artifact/artifact.tar -C /tmp/rafiqi-site
+          mkdir -p public/data public/download public/fonts public/icons
+          cp /tmp/rafiqi-site/data/quran.json public/data/quran.json
+          cp /tmp/rafiqi-site/download/Rafiqi.apk public/download/Rafiqi.apk
+          cp /tmp/rafiqi-site/audio-adhan.mp3 public/audio-adhan.mp3
+          cp /tmp/rafiqi-site/fonts/noto-sans-arabic.ttf public/fonts/noto-sans-arabic.ttf
+          cp /tmp/rafiqi-site/fonts/noto-naskh-arabic.ttf public/fonts/noto-naskh-arabic.ttf
+          cp /tmp/rafiqi-site/icons/icon-192.png public/icons/icon-192.png
+          cp /tmp/rafiqi-site/icons/icon-512.png public/icons/icon-512.png
+      - name: Commit assets into the repository
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/quran.json public/download/Rafiqi.apk public/audio-adhan.mp3 public/fonts public/icons
+          if git diff --cached --quiet; then
+            echo "Runtime assets already present."
+            exit 0
+          fi
+          git commit -m "Vendor runtime assets into repository"
+          git push
