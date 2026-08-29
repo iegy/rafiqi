@@ -8,15 +8,18 @@ import {
   ChevronRight,
   ChevronUp,
   CircleGauge,
+  Minus,
+  Move,
   Pause,
   Play,
+  Plus,
   Repeat2,
   RotateCcw,
   Search,
   Volume2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type QuranAyah = {
   number: number;
@@ -127,6 +130,8 @@ function fallbackAyahUrl(globalAyah: number, edition: string) {
 
 export function QuranPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const desiredPlaying = useRef(false);
   const [expanded, setExpanded] = useState(false);
   const [quran, setQuran] = useState<QuranSurah[]>([]);
@@ -150,6 +155,9 @@ export function QuranPlayer() {
   const [fallbackAyahIndex, setFallbackAyahIndex] = useState(0);
   const [message, setMessage] = useState("");
   const [loadingLibrary, setLoadingLibrary] = useState(true);
+  const [playerWidth, setPlayerWidth] = useState(500);
+  const [playerOffset, setPlayerOffset] = useState({ x: 0, y: 0 });
+  const [draggingPlayer, setDraggingPlayer] = useState(false);
 
   const currentSurah = useMemo(
     () => quran.find((surah) => surah.number === selectedSurah) ?? null,
@@ -224,6 +232,8 @@ export function QuranPlayer() {
         volume?: number;
         repeat?: RepeatMode;
         continuous?: boolean;
+        playerWidth?: number;
+        playerOffset?: { x: number; y: number };
       };
       if (saved.surah && saved.surah >= 1 && saved.surah <= 114) setSelectedSurah(saved.surah);
       if (saved.voice) setSelectedVoiceKey(saved.voice);
@@ -231,6 +241,10 @@ export function QuranPlayer() {
       if (typeof saved.volume === "number") setVolume(Math.max(0, Math.min(1, saved.volume)));
       if (saved.repeat === "off" || saved.repeat === "surah" || saved.repeat === "ayah") setRepeatMode(saved.repeat);
       if (typeof saved.continuous === "boolean") setContinueSurahs(saved.continuous);
+      if (typeof saved.playerWidth === "number") setPlayerWidth(Math.max(400, Math.min(680, saved.playerWidth)));
+      if (saved.playerOffset && Number.isFinite(saved.playerOffset.x) && Number.isFinite(saved.playerOffset.y)) {
+        setPlayerOffset({ x: saved.playerOffset.x, y: saved.playerOffset.y });
+      }
     } catch {
       // Keep defaults if old browser state is malformed.
     }
@@ -246,9 +260,11 @@ export function QuranPlayer() {
         volume,
         repeat: repeatMode,
         continuous: continueSurahs,
+        playerWidth,
+        playerOffset,
       }),
     );
-  }, [continueSurahs, repeatMode, selectedSurah, selectedVoiceKey, speed, volume]);
+  }, [continueSurahs, playerOffset, playerWidth, repeatMode, selectedSurah, selectedVoiceKey, speed, volume]);
 
   useEffect(() => {
     let active = true;
@@ -474,7 +490,7 @@ export function QuranPlayer() {
   const handleAudioError = useCallback(() => {
     if (!selectedVoice || !currentSurah) return;
     if (!usingFallback && currentSurah.ayahs.length) {
-      setMessage(`تعذر ملف السورة لهذا القارئ؛ تم التحويل تلقائيًا إلى تشغيل الآيات عبر AlQuran.Cloud.`);
+      setMessage("تعذر ملف السورة لهذا القارئ؛ تم التحويل تلقائيًا إلى تشغيل الآيات الاحتياطي.");
       setUsingFallback(true);
       setFallbackAyahIndex(0);
       return;
@@ -482,7 +498,7 @@ export function QuranPlayer() {
     desiredPlaying.current = false;
     setIsPlaying(false);
     setLoadingAudio(false);
-    setMessage("تعذر تشغيل التلاوة من المصدرين. جرّب قارئًا آخر.");
+    setMessage("تعذر تشغيل التلاوة حاليًا. جرّب قارئًا آخر.");
   }, [currentSurah, selectedVoice, usingFallback]);
 
   const seek = (value: number) => {
@@ -550,6 +566,62 @@ export function QuranPlayer() {
     };
   }, [currentAyahNumber, currentSurah, goToSurah, pause, play, selectedSurah, selectedVoice]);
 
+  const beginPlayerDrag = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || window.innerWidth < 768) return;
+    event.preventDefault();
+    dragState.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: playerOffset.x,
+      originY: playerOffset.y,
+    };
+    setDraggingPlayer(true);
+  }, [playerOffset]);
+
+  useEffect(() => {
+    const handleMove = (event: PointerEvent) => {
+      const state = dragState.current;
+      if (!state || window.innerWidth < 768) return;
+      const node = playerRef.current;
+      const width = node?.offsetWidth ?? playerWidth;
+      const height = node?.offsetHeight ?? 90;
+      const baseLeft = window.innerWidth - 24 - width;
+      const baseTop = window.innerHeight - 20 - height;
+      const minX = 12 - baseLeft;
+      const maxX = 12;
+      const minY = 12 - baseTop;
+      const maxY = 8;
+      const x = state.originX + event.clientX - state.startX;
+      const y = state.originY + event.clientY - state.startY;
+      setPlayerOffset({
+        x: Math.min(maxX, Math.max(minX, x)),
+        y: Math.min(maxY, Math.max(minY, y)),
+      });
+    };
+    const handleUp = () => {
+      if (!dragState.current) return;
+      dragState.current = null;
+      setDraggingPlayer(false);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+    };
+  }, [playerWidth]);
+
+  const resizePlayer = (delta: number) => {
+    setPlayerWidth((width) => Math.max(400, Math.min(680, width + delta)));
+  };
+
+  const resetPlayerLayout = () => {
+    setPlayerWidth(500);
+    setPlayerOffset({ x: 0, y: 0 });
+  };
+
   const sleepLabel = sleepRemaining
     ? `${Math.floor(sleepRemaining / 60)}:${String(sleepRemaining % 60).padStart(2, "0")}`
     : "إيقاف";
@@ -579,7 +651,16 @@ export function QuranPlayer() {
         onError={handleAudioError}
       />
 
-      <div className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-3 right-3 z-[80] md:bottom-5 md:left-auto md:right-6 md:w-[500px]" dir="rtl">
+      <div
+        ref={playerRef}
+        className={`rafiqi-quran-floating fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-3 right-3 z-[80] md:bottom-5 md:left-auto md:right-6 ${draggingPlayer ? "is-dragging" : ""}`}
+        style={{
+          "--rafiqi-player-width": `${playerWidth}px`,
+          "--rafiqi-player-x": `${playerOffset.x}px`,
+          "--rafiqi-player-y": `${playerOffset.y}px`,
+        } as CSSProperties}
+        dir="rtl"
+      >
         {expanded && (
           <div className="mb-3 max-h-[72vh] overflow-y-auto rounded-[28px] border border-border bg-card/95 p-4 text-foreground shadow-2xl backdrop-blur-xl md:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
@@ -589,12 +670,29 @@ export function QuranPlayer() {
                 </div>
                 <div className="min-w-0">
                   <strong className="block text-lg">مشغل القرآن</strong>
-                  <small className="block truncate text-muted-foreground">MP3Quran + AlQuran.Cloud · بدون حساب أو Backend</small>
+                  <small className="block truncate text-muted-foreground">تلاوة القرآن الكريم · تشغيل متواصل</small>
                 </div>
               </div>
-              <button className="grid h-9 w-9 place-items-center rounded-xl border border-border" onClick={() => setExpanded(false)} aria-label="تصغير المشغل">
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <button className="hidden h-9 w-9 place-items-center rounded-xl border border-border md:grid" onClick={() => resizePlayer(-80)} aria-label="تصغير عرض المشغل" title="تصغير المشغل">
+                  <Minus className="h-4 w-4" />
+                </button>
+                <button
+                  className="rafiqi-player-drag-handle hidden h-9 w-9 place-items-center rounded-xl border border-border md:grid"
+                  onPointerDown={beginPlayerDrag}
+                  onDoubleClick={resetPlayerLayout}
+                  aria-label="اسحب لتحريك المشغل"
+                  title="اسحب لتحريك المشغل · نقرتان لإعادة المكان والحجم"
+                >
+                  <Move className="h-4 w-4" />
+                </button>
+                <button className="hidden h-9 w-9 place-items-center rounded-xl border border-border md:grid" onClick={() => resizePlayer(80)} aria-label="تكبير عرض المشغل" title="تكبير المشغل">
+                  <Plus className="h-4 w-4" />
+                </button>
+                <button className="grid h-9 w-9 place-items-center rounded-xl border border-border" onClick={() => setExpanded(false)} aria-label="تصغير المشغل">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {message && (
@@ -759,7 +857,6 @@ export function QuranPlayer() {
             </div>
 
             <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>{usingFallback ? "المصدر: AlQuran.Cloud CDN" : "المصدر: MP3Quran.net"}</span>
               <span>{timings.length && !usingFallback ? `توقيت ${timings.filter((item) => item.ayah > 0).length} آية` : "التشغيل مستمر تلقائيًا"}</span>
             </div>
           </div>

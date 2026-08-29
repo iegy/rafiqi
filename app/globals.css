@@ -126,3 +126,16 @@ button,input,select,textarea { font: inherit; } button { cursor: pointer; } a:no
   .wird-list article{grid-template-columns:auto 1fr auto}.wird-list .mini-progress{grid-column:2/4;grid-row:2}.instruction-card{grid-template-columns:auto 1fr}.instruction-card button{grid-column:1/-1}.notes-list article{align-items:flex-start;display:grid}.notes-list article>div{justify-content:flex-end}.settings-list section{align-items:stretch;display:grid}.settings-list section select{width:100%}.mini-player{min-height:64px;bottom:72px;grid-template-columns:auto 1fr auto}.mini-player>svg{display:none}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+
+/* Quran player desktop positioning controls */
+@media (min-width: 768px) {
+  .rafiqi-quran-floating {
+    width: var(--rafiqi-player-width, 500px);
+    transform: translate(var(--rafiqi-player-x, 0px), var(--rafiqi-player-y, 0px));
+    transition: width .18s ease, transform .08s ease;
+  }
+  .rafiqi-quran-floating.is-dragging { transition: none; }
+  .rafiqi-player-drag-handle { cursor: grab; touch-action: none; user-select: none; }
+  .rafiqi-player-drag-handle:active { cursor: grabbing; }
+}
