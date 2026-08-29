@@ -24,7 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Fetch Quran, fonts, audio, and Android APK
+      - name: Verify repository-local runtime assets
         run: npm run fetch:assets
       - run: npx next build
         env:
