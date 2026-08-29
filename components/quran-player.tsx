@@ -356,7 +356,7 @@ export function QuranPlayer() {
         setMessage("اضغط تشغيل لبدء التلاوة؛ بعض المتصفحات تمنع التشغيل التلقائي.");
       });
     }
-  }, [audioSource, speed, volume]);
+  }, [audioSource]);
 
   useEffect(() => {
     const audio = audioRef.current;
